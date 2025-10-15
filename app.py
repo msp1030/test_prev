@@ -325,40 +325,45 @@ def fenotipo(genotipo):
             alelos = diccionario[nombre][gen].split('/')   
             if gen == 'DPYD' or gen == 'UGT1A1':
                 if alelos[0] == "*1" and alelos[1] == "*1":       
-                    Sol[nombre][gen] = ['Metabolizador normal', 1.0]
+                    Sol[nombre][gen] = [f"{alelos[0]}/{alelos[1]}",'Metabolizador normal', 1.0]
                 elif alelos[0] != "*1" and alelos[1] != "*1":
-                    Sol[nombre][gen] = ['Metabolizador lento', 0.0]
+                    Sol[nombre][gen] = [f"{alelos[0]}/{alelos[1]}",'Metabolizador lento', 0.0]
                 else:
-                    Sol[nombre][gen] = ['Metabolizador intermedio', 0.5]
+                    Sol[nombre][gen] = [f"{alelos[0]}/{alelos[1]}",'Metabolizador intermedio', 0.5]
             else:
-                Sol[nombre][gen] = diccionario_CYP2D6[diccionario[nombre][gen]]
+                Sol[nombre][gen] = [diccionario[nombre][gen]]
+                Sol[nombre][gen].append(diccionario_CYP2D6[diccionario[nombre][gen]][0])
+                Sol[nombre][gen].append(diccionario_CYP2D6[diccionario[nombre][gen]][1])
     return Sol
 
 fenotipo_test = fenotipo(resultados_formateados)
+#print(fenotipo_test)
 
 
-def recomendacionClinica(genotipo, fenotipo):
-    resultado
+def recomendacionClinica(fenotipo):
+    import json # Importa la biblioteca JSON para trabajar con datos JSON.
+    import requests # Importa la biblioteca Requests para realizar solicitudes HTTP.
+    resultado = fenotipo # Inicializa una lista vacía para almacenar los resultados.
     for paciente in fenotipo:
+        for gen in fenotipo[paciente]:
+            lookupkey= [gen, fenotipo[paciente][gen][1]] # Obtiene la clave de búsqueda del fenotipo.
+            if gen == "CYP2D6":
+                ID_Farmaco = "RxNorm:10324"
+            elif gen == "DPYD":
+                ID_Farmaco = "RxNorm:4492"
+            elif gen == "UGT1A1":
+                ID_Farmaco = "RxNorm:51499"
 
+            url='https://api.cpicpgx.org/v1/recommendation?select=drug(name),guideline(name),*&drugid=eq.'+ID_Farmaco+'&lookupkey=cs.{\"'+lookupkey[0]+'":"'+lookupkey[1]+'"}' # Define la URL de la API CPIC para buscar recomendaciones basadas en el ID del fármaco y la clave de búsqueda.
+            response = requests.get(url) # Realiza una solicitud GET a la API.
+            json_obtenido = response.json() # Convierte la respuesta JSON en un objeto Python.
+            datos=json_obtenido # Asigna los datos JSON a la variable 'datos'.
+            if len(datos) != 0: # Verifica si se encontraron recomendaciones.
+                print(datos)
+                resultado[paciente][gen].append(datos[0]['drugrecommendation'].encode('latin-1','ignore').decode('latin-1')) # Agrega la recomendación del fármaco a la lista, decodificando caracteres especiales.
+    return resultado # Devuelve la lista con los resultados.
 
-
-
-    lista = [] # Inicializa una lista vacía para almacenar los resultados.
-    if len(fenotipo) != 0: # Verifica si se encontró un fenotipo.
-        lookupkey= fenotipo[0]['lookupkey'] # Obtiene la clave de búsqueda del fenotipo.
-        ID_Farmaco=ID_CPIC_Farmaco(farmaco) # Obtiene el ID del fármaco.
-        import json # Importa la biblioteca JSON para trabajar con datos JSON.
-        import requests # Importa la biblioteca Requests para realizar solicitudes HTTP.
-        url='https://api.cpicpgx.org/v1/recommendation?select=drug(name), guideline(name), * &drugid=eq.'+ID_Farmaco+'&lookupkey=cs.{\"'+list(lookupkey.keys())[0]+'":"'+list(lookupkey.values())[0]+'"}' # Define la URL de la API CPIC para buscar recomendaciones basadas en el ID del fármaco y la clave de búsqueda.
-        response = requests.get(url) # Realiza una solicitud GET a la API.
-        json_obtenido = response.json() # Convierte la respuesta JSON en un objeto Python.
-        datos=json_obtenido # Asigna los datos JSON a la variable 'datos'.
-        if len(datos) != 0: # Verifica si se encontraron recomendaciones.
-            lista.append(fenotipo[0]['generesult']) # Agrega el resultado del gen a la lista.
-            lista.append(datos[0]['drugrecommendation'].encode('latin-1','ignore').decode('latin-1')) # Agrega la recomendación del fármaco a la lista, decodificando caracteres especiales.
-            lista.append(datos[0]['guideline']['name']) # Agrega el nombre de la guía a la lista.
-    return lista # Devuelve la lista con los resultados.
+print(recomendacionClinica(fenotipo_test))
 
 '''
 def main():
