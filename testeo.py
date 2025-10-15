@@ -38,6 +38,7 @@ def fenotipoSegunAlelos(gen,alelo1,alelo2):
     datos=json_obtenido
     return datos
 
-print(fenotipoSegunAlelos("CYP2D6", "*1", "*4"))
+print(fenotipoSegunAlelos("CYP2D6", "*4", "*10"))
+
 
 

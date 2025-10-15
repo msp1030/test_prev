@@ -8,7 +8,7 @@ import os
 import base64
 import openpyxl
 
-
+'''
 # Configuración de la página
 st.set_page_config(
     page_title="Sistema de Análisis de Alelos",
@@ -160,7 +160,7 @@ def create_pdf(paciente_data, alelos_df, interpretacion):
     pdf.add_interpretation(interpretacion)
     
     return pdf
-
+'''
 
 def lectura_csv(path):
     # Lectura del archivo csv con los datos de cada paciente.
@@ -307,37 +307,60 @@ def formatear_genotipos(resultados):
 
 
 # Procesar
-#dict_pacientes = lectura_csv("Genotype Matrix.csv")
-#resultados = determinar_genotipo_definitivo(dict_pacientes)
-#resultados_formateados = formatear_genotipos(resultados)
+dict_pacientes = lectura_csv("Genotype Matrix.csv")
+resultados = determinar_genotipo_definitivo(dict_pacientes)
+resultados_formateados = formatear_genotipos(resultados)
 
 #print(resultados_formateados)
 
 
 df = pd.read_excel("CYP2D6_Diplotype_Phenotype_Table.xlsx")
-diccionario_CYP2D6 = dict(zip(df.iloc[:, 0], df.iloc[:, 2]))
-def fenotipo (genotipo):
+diccionario_CYP2D6 = dict(zip(df.iloc[:, 0], zip(df.iloc[:, 1], df.iloc[:, 2])))
+def fenotipo(genotipo):
     Sol = {}
     diccionario = genotipo
     for nombre in diccionario:
         Sol[nombre] = {}
         for gen in diccionario[nombre]:
             alelos = diccionario[nombre][gen].split('/')   
-            if gen == 'DPYD'  or gen == 'UGT1A1 ':
+            if gen == 'DPYD' or gen == 'UGT1A1':
                 if alelos[0] == "*1" and alelos[1] == "*1":       
-                    Sol[nombre][gen] = 'Metabolizador normal'
+                    Sol[nombre][gen] = ['Metabolizador normal', 1.0]
                 elif alelos[0] != "*1" and alelos[1] != "*1":
-                    Sol[nombre][gen] = 'Metabolizador lento'
+                    Sol[nombre][gen] = ['Metabolizador lento', 0.0]
                 else:
-                    Sol[nombre][gen] = 'Metabolizador intermedio'
+                    Sol[nombre][gen] = ['Metabolizador intermedio', 0.5]
             else:
                 Sol[nombre][gen] = diccionario_CYP2D6[diccionario[nombre][gen]]
     return Sol
 
-#print(fenotipo(resultados_formateados))
+fenotipo_test = fenotipo(resultados_formateados)
+
+
+def recomendacionClinica(genotipo, fenotipo):
+    resultado
+    for paciente in fenotipo:
 
 
 
+
+    lista = [] # Inicializa una lista vacía para almacenar los resultados.
+    if len(fenotipo) != 0: # Verifica si se encontró un fenotipo.
+        lookupkey= fenotipo[0]['lookupkey'] # Obtiene la clave de búsqueda del fenotipo.
+        ID_Farmaco=ID_CPIC_Farmaco(farmaco) # Obtiene el ID del fármaco.
+        import json # Importa la biblioteca JSON para trabajar con datos JSON.
+        import requests # Importa la biblioteca Requests para realizar solicitudes HTTP.
+        url='https://api.cpicpgx.org/v1/recommendation?select=drug(name), guideline(name), * &drugid=eq.'+ID_Farmaco+'&lookupkey=cs.{\"'+list(lookupkey.keys())[0]+'":"'+list(lookupkey.values())[0]+'"}' # Define la URL de la API CPIC para buscar recomendaciones basadas en el ID del fármaco y la clave de búsqueda.
+        response = requests.get(url) # Realiza una solicitud GET a la API.
+        json_obtenido = response.json() # Convierte la respuesta JSON en un objeto Python.
+        datos=json_obtenido # Asigna los datos JSON a la variable 'datos'.
+        if len(datos) != 0: # Verifica si se encontraron recomendaciones.
+            lista.append(fenotipo[0]['generesult']) # Agrega el resultado del gen a la lista.
+            lista.append(datos[0]['drugrecommendation'].encode('latin-1','ignore').decode('latin-1')) # Agrega la recomendación del fármaco a la lista, decodificando caracteres especiales.
+            lista.append(datos[0]['guideline']['name']) # Agrega el nombre de la guía a la lista.
+    return lista # Devuelve la lista con los resultados.
+
+'''
 def main():
     # Header principal
     st.markdown('<div class="main-header">🧬 SISTEMA DE ANÁLISIS DE ALELOS</div>', unsafe_allow_html=True)
@@ -527,3 +550,4 @@ if __name__ == "__main__":
     main()
 
 
+'''
