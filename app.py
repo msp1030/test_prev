@@ -8,7 +8,7 @@ import os
 import base64
 import openpyxl
 
-'''
+
 # Configuración de la página
 st.set_page_config(
     page_title="Sistema de Análisis de Alelos",
@@ -160,7 +160,7 @@ def create_pdf(paciente_data, alelos_df, interpretacion):
     pdf.add_interpretation(interpretacion)
     
     return pdf
-'''
+
 
 def lectura_csv(path):
     # Lectura del archivo csv con los datos de cada paciente.
@@ -365,7 +365,7 @@ def recomendacionClinica(fenotipo):
 
 print(recomendacionClinica(fenotipo_test))
 
-'''
+
 def main():
     # Header principal
     st.markdown('<div class="main-header">🧬 SISTEMA DE ANÁLISIS DE ALELOS</div>', unsafe_allow_html=True)
@@ -555,4 +555,3 @@ if __name__ == "__main__":
     main()
 
 
-'''
