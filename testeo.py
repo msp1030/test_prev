@@ -58,7 +58,13 @@ def recomendacionClinica(gen,alelo1,alelo2,farmaco):
             lista.append(urlGuia(farmaco,datos[0]['guidelineid'])) # Agrega la URL de la guía a la lista.
     return lista # Devuelve la lista con los resultados.
 
-print(recomendacionClinica("CYP2D6", "*4", "*10", "tamoxifen"))
+print(fenotipoSegunAlelos("DPYD", "Reference", "Reference"))
 
+
+
+
+#from app import resultado_final
+
+#print(resultado)
 
 

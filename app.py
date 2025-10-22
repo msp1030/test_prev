@@ -8,6 +8,7 @@ import os
 import base64
 import openpyxl
 
+'''
 
 # Configuración de la página
 st.set_page_config(
@@ -161,6 +162,7 @@ def create_pdf(paciente_data, alelos_df, interpretacion):
     
     return pdf
 
+'''
 
 def lectura_csv(path):
     # Lectura del archivo csv con los datos de cada paciente.
@@ -325,11 +327,11 @@ def fenotipo(genotipo):
             alelos = diccionario[nombre][gen].split('/')   
             if gen == 'DPYD' or gen == 'UGT1A1':
                 if alelos[0] == "*1" and alelos[1] == "*1":       
-                    Sol[nombre][gen] = [f"{alelos[0]}/{alelos[1]}",'Metabolizador normal', 1.0]
+                    Sol[nombre][gen] = [f"{alelos[0]}/{alelos[1]}", 1.0, 'Normal Metabolizer']
                 elif alelos[0] != "*1" and alelos[1] != "*1":
-                    Sol[nombre][gen] = [f"{alelos[0]}/{alelos[1]}",'Metabolizador lento', 0.0]
+                    Sol[nombre][gen] = [f"{alelos[0]}/{alelos[1]}", 0.0, 'Poor Metabolizer']
                 else:
-                    Sol[nombre][gen] = [f"{alelos[0]}/{alelos[1]}",'Metabolizador intermedio', 0.5]
+                    Sol[nombre][gen] = [f"{alelos[0]}/{alelos[1]}", 0.5,'Intermediate Metabolizer']
             else:
                 Sol[nombre][gen] = [diccionario[nombre][gen]]
                 Sol[nombre][gen].append(diccionario_CYP2D6[diccionario[nombre][gen]][0])
@@ -337,7 +339,7 @@ def fenotipo(genotipo):
     return Sol
 
 fenotipo_test = fenotipo(resultados_formateados)
-#print(fenotipo_test)
+print(fenotipo_test)
 
 
 def recomendacionClinica(fenotipo):
@@ -346,26 +348,32 @@ def recomendacionClinica(fenotipo):
     resultado = fenotipo # Inicializa una lista vacía para almacenar los resultados.
     for paciente in fenotipo:
         for gen in fenotipo[paciente]:
-            lookupkey= [gen, fenotipo[paciente][gen][1]] # Obtiene la clave de búsqueda del fenotipo.
             if gen == "CYP2D6":
+                lookupkey= [gen, fenotipo[paciente][gen][1]] # Obtiene la clave de búsqueda del fenotipo.
                 ID_Farmaco = "RxNorm:10324"
+                url='https://api.cpicpgx.org/v1/recommendation?select=drug(name),guideline(name),*&drugid=eq.'+ID_Farmaco+'&lookupkey=cs.{\"'+lookupkey[0]+'":"'+lookupkey[1]+'"}' 
             elif gen == "DPYD":
+                
+                lookupkey= [gen, fenotipo[paciente][gen][2]] # Obtiene la clave de búsqueda del fenotipo.
                 ID_Farmaco = "RxNorm:4492"
+                url='https://api.cpicpgx.org/v1/recommendation?select=drug(name),guideline(name),*&drugid=eq.'+ID_Farmaco+'&lookupkey=cs.{\"'+lookupkey[0]+'":"'+lookupkey[1]+'"}' 
             elif gen == "UGT1A1":
+                lookupkey= [gen, fenotipo[paciente][gen][2]] # Obtiene la clave de búsqueda del fenotipo.
                 ID_Farmaco = "RxNorm:51499"
-
-            url='https://api.cpicpgx.org/v1/recommendation?select=drug(name),guideline(name),*&drugid=eq.'+ID_Farmaco+'&lookupkey=cs.{\"'+lookupkey[0]+'":"'+lookupkey[1]+'"}' # Define la URL de la API CPIC para buscar recomendaciones basadas en el ID del fármaco y la clave de búsqueda.
+                url='https://api.cpicpgx.org/v1/recommendation?select=drug(name),guideline(name),*&drugid=eq.'+ID_Farmaco+'&lookupkey=cs.{\"'+lookupkey[0]+'":"'+lookupkey[1]+'"}' 
             response = requests.get(url) # Realiza una solicitud GET a la API.
             json_obtenido = response.json() # Convierte la respuesta JSON en un objeto Python.
             datos=json_obtenido # Asigna los datos JSON a la variable 'datos'.
             if len(datos) != 0: # Verifica si se encontraron recomendaciones.
-                print(datos)
+                #print(datos)
                 resultado[paciente][gen].append(datos[0]['drugrecommendation'].encode('latin-1','ignore').decode('latin-1')) # Agrega la recomendación del fármaco a la lista, decodificando caracteres especiales.
     return resultado # Devuelve la lista con los resultados.
 
-print(recomendacionClinica(fenotipo_test))
+#resultado_final = recomendacionClinica(fenotipo_test)
 
 
+
+'''
 def main():
     # Header principal
     st.markdown('<div class="main-header">🧬 SISTEMA DE ANÁLISIS DE ALELOS</div>', unsafe_allow_html=True)
@@ -554,4 +562,5 @@ def main():
 if __name__ == "__main__":
     main()
 
+'''
 
