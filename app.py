@@ -327,11 +327,11 @@ def fenotipo(genotipo):
             alelos = diccionario[nombre][gen].split('/')   
             if gen == 'DPYD' or gen == 'UGT1A1':
                 if alelos[0] == "*1" and alelos[1] == "*1":       
-                    Sol[nombre][gen] = [f"{alelos[0]}/{alelos[1]}", 1.0, 'Normal Metabolizer']
+                    Sol[nombre][gen] = [f"{alelos[0]}/{alelos[1]}", 2.0, 'Normal Metabolizer']
                 elif alelos[0] != "*1" and alelos[1] != "*1":
                     Sol[nombre][gen] = [f"{alelos[0]}/{alelos[1]}", 0.0, 'Poor Metabolizer']
                 else:
-                    Sol[nombre][gen] = [f"{alelos[0]}/{alelos[1]}", 0.5,'Intermediate Metabolizer']
+                    Sol[nombre][gen] = [f"{alelos[0]}/{alelos[1]}", 1.0, 'Intermediate Metabolizer']
             else:
                 Sol[nombre][gen] = [diccionario[nombre][gen]]
                 Sol[nombre][gen].append(diccionario_CYP2D6[diccionario[nombre][gen]][0])
@@ -349,16 +349,15 @@ def recomendacionClinica(fenotipo):
     for paciente in fenotipo:
         for gen in fenotipo[paciente]:
             if gen == "CYP2D6":
-                lookupkey= [gen, fenotipo[paciente][gen][1]] # Obtiene la clave de búsqueda del fenotipo.
+                lookupkey= [gen, str(fenotipo[paciente][gen][1])] # Obtiene la clave de búsqueda del fenotipo.
                 ID_Farmaco = "RxNorm:10324"
                 url='https://api.cpicpgx.org/v1/recommendation?select=drug(name),guideline(name),*&drugid=eq.'+ID_Farmaco+'&lookupkey=cs.{\"'+lookupkey[0]+'":"'+lookupkey[1]+'"}' 
             elif gen == "DPYD":
-                
-                lookupkey= [gen, fenotipo[paciente][gen][2]] # Obtiene la clave de búsqueda del fenotipo.
+                lookupkey= [gen, str(fenotipo[paciente][gen][1])] # Obtiene la clave de búsqueda del fenotipo.
                 ID_Farmaco = "RxNorm:4492"
                 url='https://api.cpicpgx.org/v1/recommendation?select=drug(name),guideline(name),*&drugid=eq.'+ID_Farmaco+'&lookupkey=cs.{\"'+lookupkey[0]+'":"'+lookupkey[1]+'"}' 
             elif gen == "UGT1A1":
-                lookupkey= [gen, fenotipo[paciente][gen][2]] # Obtiene la clave de búsqueda del fenotipo.
+                lookupkey= [gen, str(fenotipo[paciente][gen][2])] # Obtiene la clave de búsqueda del fenotipo.
                 ID_Farmaco = "RxNorm:51499"
                 url='https://api.cpicpgx.org/v1/recommendation?select=drug(name),guideline(name),*&drugid=eq.'+ID_Farmaco+'&lookupkey=cs.{\"'+lookupkey[0]+'":"'+lookupkey[1]+'"}' 
             response = requests.get(url) # Realiza una solicitud GET a la API.
@@ -369,8 +368,9 @@ def recomendacionClinica(fenotipo):
                 resultado[paciente][gen].append(datos[0]['drugrecommendation'].encode('latin-1','ignore').decode('latin-1')) # Agrega la recomendación del fármaco a la lista, decodificando caracteres especiales.
     return resultado # Devuelve la lista con los resultados.
 
-#resultado_final = recomendacionClinica(fenotipo_test)
+resultado_final = recomendacionClinica(fenotipo_test)
 
+print(resultado_final)
 
 
 '''

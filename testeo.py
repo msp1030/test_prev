@@ -52,13 +52,15 @@ def recomendacionClinica(gen,alelo1,alelo2,farmaco):
         json_obtenido = response.json() # Convierte la respuesta JSON en un objeto Python.
         datos=json_obtenido # Asigna los datos JSON a la variable 'datos'.
         if len(datos) != 0: # Verifica si se encontraron recomendaciones.
-            lista.append(fenotipo[0]['generesult']) # Agrega el resultado del gen a la lista.
+            print(datos)
             lista.append(datos[0]['drugrecommendation'].encode('latin-1','ignore').decode('latin-1')) # Agrega la recomendación del fármaco a la lista, decodificando caracteres especiales.
-            lista.append(datos[0]['guideline']['name']) # Agrega el nombre de la guía a la lista.
-            lista.append(urlGuia(farmaco,datos[0]['guidelineid'])) # Agrega la URL de la guía a la lista.
     return lista # Devuelve la lista con los resultados.
 
-print(fenotipoSegunAlelos("DPYD", "Reference", "Reference"))
+print(fenotipoSegunAlelos("DPYD", "Reference", "c.1905+1G>A (*2A"))
+
+
+
+
 
 
 
