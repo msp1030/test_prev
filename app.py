@@ -441,10 +441,6 @@ def main():
     elif page == "📝 Datos del Paciente":
         st.markdown('<div class="sub-header">📝 INFORMACIÓN DE LOS PACIENTES</div>', unsafe_allow_html=True)
         
-        # Inicializar el almacenamiento de pacientes en session_state si no existe
-        if 'pacientes_data' not in st.session_state:
-            st.session_state.pacientes_data = {}
-        
         # Selector de paciente
         pacientes_disponibles = list(resultado_final.keys())
         paciente_seleccionado = st.selectbox("Selecciona el paciente *", pacientes_disponibles)
@@ -580,71 +576,85 @@ def main():
         
     # Sección 3: Generar Reporte
     elif page == "📄 Generar Reporte":
-        st.markdown('<div class="sub-header">📄 GENERAR REPORTE PDF</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sub-header">📄 GENERAR REPORTES PDF</div>', unsafe_allow_html=True)
         
-        # Verificar que tenemos datos
-        if st.session_state.paciente_data is None:
-            st.warning("⚠️ Primero ingresa los datos del paciente en la sección '📝 Datos del Paciente'")
-            return
-        
+        # Verificar que tenemos datos de alelos
         if st.session_state.alelos_df is None:
             st.warning("⚠️ Primero carga un archivo CSV en la sección '📤 Cargar Alelos'")
             return
         
-        # Mostrar resumen
-        st.markdown('<div class="patient-card">', unsafe_allow_html=True)
-        st.markdown(f"### 👤 Paciente: {st.session_state.paciente_data['nombre']}")
-        st.markdown(f"**ID:** {st.session_state.paciente_data['id_paciente']} | **Edad:** {st.session_state.paciente_data['edad']} | **Médico:** {st.session_state.paciente_data['medico']}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        pacientes_disponibles = list(resultado_final.keys())
         
-        st.markdown(f"**📊 Datos de alelos cargados:** {len(st.session_state.alelos_df)} registros")
+        # Selector múltiple para generar varios PDFs a la vez
+        st.markdown("### Selecciona los pacientes para generar reportes:")
         
-        # Interpretación personalizada
+        pacientes_seleccionados = st.multiselect(
+            "Pacientes a generar:",
+            pacientes_disponibles,
+            default=list(st.session_state.pacientes_data.keys())  # Por defecto los que tienen datos
+        )
+        
+        if not pacientes_seleccionados:
+            st.info("💡 Selecciona al menos un paciente para generar reportes PDF")
+            return
+        
+        # Interpretación personalizada (compartida para todos los pacientes o individual)
         st.markdown("### 🧪 Interpretación de Resultados")
-        interpretacion = st.text_area(
-            "Escribe la interpretación clínica de los resultados:",
+        interpretacion_compartida = st.text_area(
+            "Interpretación clínica (compartida para todos los pacientes):",
             value="Los resultados del análisis genético muestran el perfil de alelos del paciente. "
-                  "Se recomienda revisar los hallazgos en el contexto clínico particular del paciente "
-                  "y considerar la correlación con la presentación sintomática.",
+                "Se recomienda revisar los hallazgos en el contexto clínico particular del paciente "
+                "y considerar la correlación con la presentación sintomática.",
             height=150
         )
         
-        # Generar PDF
-        if st.button("🖨️ Generar Reporte PDF"):
-            with st.spinner("Generando reporte PDF..."):
-                try:
-                    pdf = create_pdf(
-                        st.session_state.paciente_data,
-                        st.session_state.alelos_df,
-                        interpretacion
-                    )
-                    
-                    # Guardar PDF en bytes
-                    pdf_bytes = pdf.output(dest='S').encode('latin1')
-                    
-                    # Crear botón de descarga
-                    st.success("✅ Reporte generado correctamente!")
-                    
-                    st.download_button(
-                        label="📥 Descargar Reporte PDF",
-                        data=pdf_bytes,
-                        file_name=f"reporte_{st.session_state.paciente_data['id_paciente']}_{datetime.now().strftime('%Y%m%d')}.pdf",
-                        mime="application/pdf",
-                    )
-                    
-                    # Vista previa del PDF (opcional)
-                    with st.expander("👁️ Vista previa del PDF (primeras páginas)"):
-                        st.info("Nota: Esta es una representación simplificada. Descarga el PDF para ver el documento completo.")
-                        st.markdown("**Contenido del reporte:**")
-                        st.json({
-                            "Paciente": st.session_state.paciente_data['nombre'],
-                            "ID": st.session_state.paciente_data['id_paciente'],
-                            "Registros de alelos": len(st.session_state.alelos_df),
-                            "Fecha de generación": datetime.now().strftime("%d/%m/%Y %H:%M")
+        # Generar PDFs
+        if st.button("🖨️ Generar Reportes PDF Seleccionados"):
+            for paciente in pacientes_seleccionados:
+                with st.spinner(f"Generando reporte para {paciente}..."):
+                    try:
+                        # Obtener datos del paciente (si existen)
+                        paciente_data = st.session_state.pacientes_data.get(paciente, {
+                            'nombre': f"Paciente {paciente}",
+                            'edad': 0,
+                            'sexo': '',
+                            'id_paciente': paciente,
+                            'medico': '',
+                            'fecha_nacimiento': datetime.now().strftime("%d/%m/%Y"),
+                            'telefono': '',
+                            'email': '',
+                            'direccion': '',
+                            'observaciones': ''
                         })
                         
-                except Exception as e:
-                    st.error(f"❌ Error al generar el PDF: {str(e)}")
+                        # Obtener alelos específicos para este paciente del resultado_final
+                        # (aquí asumo que resultado_final[paciente] contiene los datos de alelos)
+                        alelos_paciente = resultado_final.get(paciente, pd.DataFrame())
+                        
+                        pdf = create_pdf(
+                            paciente_data,
+                            alelos_paciente,  # O st.session_state.alelos_df si es el mismo para todos
+                            interpretacion_compartida
+                        )
+                        
+                        # Guardar PDF en bytes
+                        pdf_bytes = pdf.output(dest='S').encode('latin1')
+                        
+                        # Botón de descarga individual
+                        nombre_archivo = f"reporte_{paciente}_{datetime.now().strftime('%Y%m%d')}.pdf"
+                        
+                        st.download_button(
+                            label=f"📥 Descargar {paciente}",
+                            data=pdf_bytes,
+                            file_name=nombre_archivo,
+                            mime="application/pdf",
+                            key=f"download_{paciente}"
+                        )
+                        
+                    except Exception as e:
+                        st.error(f"❌ Error al generar PDF para {paciente}: {str(e)}")
+            
+            st.success(f"✅ Se generaron {len(pacientes_seleccionados)} reportes correctamente!")
 
 if __name__ == "__main__":
     main()
