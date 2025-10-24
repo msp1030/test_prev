@@ -382,8 +382,8 @@ def main():
         st.markdown("### 💡 Información")
         st.info("""
         Esta aplicación permite:
-        - Cargar datos de pacientes
         - Subir archivos CSV con alelos
+        - Rellenar los datos de los pacientes
         - Generar reportes en PDF
         """)
     
@@ -406,7 +406,7 @@ def main():
             try:
                 # Leer el archivo CSV
                 dict_pacientes = lectura_csv(uploaded_file)
-                st.session_state.alelos_df = dict_pacientes
+                st.session_state.pacientes_data = dict_pacientes
                 
                 st.success(f"✅ Archivo cargado correctamente! ({len(dict_pacientes)} pacientes)")
                 
@@ -441,49 +441,143 @@ def main():
     elif page == "📝 Datos del Paciente":
         st.markdown('<div class="sub-header">📝 INFORMACIÓN DE LOS PACIENTES</div>', unsafe_allow_html=True)
         
-        with st.form("patient_form"):
+        # Inicializar el almacenamiento de pacientes en session_state si no existe
+        if 'pacientes_data' not in st.session_state:
+            st.session_state.pacientes_data = {}
+        
+        # Selector de paciente
+        pacientes_disponibles = list(resultado_final.keys())
+        paciente_seleccionado = st.selectbox("Selecciona el paciente *", pacientes_disponibles)
+        
+        st.markdown(f"### Editando datos para: **{paciente_seleccionado}**")
+        
+        with st.form(f"patient_form_{paciente_seleccionado}"):
+            # Cargar datos existentes si los hay, sino valores por defecto/vacíos
+            datos_existentes = st.session_state.pacientes_data.get(paciente_seleccionado, {})
+            
             col1, col2 = st.columns(2)
             
             with col1:
-                nombre = st.text_input("Nombre completo *", placeholder="Ej: Juan Pérez García")
-                edad = st.number_input("Edad *", min_value=0, max_value=120, value=30)
-                sexo = st.selectbox("Sexo *", ["Masculino", "Femenino", "Otro"])
+                nombre = st.text_input(
+                    "Nombre completo", 
+                    value=datos_existentes.get('nombre', ''),
+                    placeholder="Ej: Juan Pérez García"
+                )
+                edad = st.number_input(
+                    "Edad", 
+                    min_value=0, 
+                    max_value=120, 
+                    value=datos_existentes.get('edad', 30)
+                )
+                sexo = st.selectbox(
+                    "Sexo", 
+                    ["", "Masculino", "Femenino", "Otro"],
+                    index=0 if 'sexo' not in datos_existentes else 
+                        ["", "Masculino", "Femenino", "Otro"].index(datos_existentes.get('sexo', ''))
+                )
             
             with col2:
-                id_paciente = st.text_input("ID del Paciente *", placeholder="Ej: PAC-001")
-                medico = st.text_input("Médico solicitante *", placeholder="Ej: Dr. Ana López")
-                fecha_nacimiento = st.date_input("Fecha de Nacimiento", value=datetime(1990, 1, 1))
+                id_paciente = st.text_input(
+                    "ID del Paciente", 
+                    value=datos_existentes.get('id_paciente', paciente_seleccionado),
+                    placeholder="Ej: DPD941"
+                )
+                medico = st.text_input(
+                    "Médico solicitante", 
+                    value=datos_existentes.get('medico', ''),
+                    placeholder="Ej: Dr. Ana López"
+                )
+                fecha_nacimiento = st.date_input(
+                    "Fecha de Nacimiento", 
+                    value=datetime.strptime(datos_existentes.get('fecha_nacimiento', '1990-01-01'), "%d/%m/%Y") 
+                    if datos_existentes.get('fecha_nacimiento') 
+                    else datetime(1990, 1, 1)
+                )
             
             # Información adicional
             st.markdown("### Información Adicional")
             col3, col4 = st.columns(2)
             with col3:
-                telefono = st.text_input("Teléfono", placeholder="+34 600 000 000")
-                email = st.text_input("Email", placeholder="paciente@email.com")
+                telefono = st.text_input(
+                    "Teléfono", 
+                    value=datos_existentes.get('telefono', ''),
+                    placeholder="+34 600 000 000"
+                )
+                email = st.text_input(
+                    "Email", 
+                    value=datos_existentes.get('email', ''),
+                    placeholder="paciente@email.com"
+                )
             with col4:
-                direccion = st.text_area("Dirección", placeholder="Calle...")
-                observaciones = st.text_area("Observaciones clínicas")
+                direccion = st.text_area(
+                    "Dirección", 
+                    value=datos_existentes.get('direccion', ''),
+                    placeholder="Calle..."
+                )
+                observaciones = st.text_area(
+                    "Observaciones clínicas", 
+                    value=datos_existentes.get('observaciones', ''),
+                    placeholder="Observaciones relevantes..."
+                )
             
             submitted = st.form_submit_button("💾 Guardar Datos del Paciente")
             
             if submitted:
-                if nombre and edad and sexo and id_paciente and medico:
-                    st.session_state.paciente_data = {
-                        'nombre': nombre,
-                        'edad': edad,
-                        'sexo': sexo,
-                        'id_paciente': id_paciente,
-                        'medico': medico,
-                        'fecha_nacimiento': fecha_nacimiento.strftime("%d/%m/%Y"),
-                        'telefono': telefono,
-                        'email': email,
-                        'direccion': direccion,
-                        'observaciones': observaciones
-                    }
-                    st.success("✅ Datos del paciente guardados correctamente!")
-                else:
-                    st.error("❌ Por favor, completa todos los campos obligatorios (*)")
-    
+                # Guardar todos los datos (incluyendo campos vacíos)
+                st.session_state.pacientes_data[paciente_seleccionado] = {
+                    'nombre': nombre,
+                    'edad': edad,
+                    'sexo': sexo,
+                    'id_paciente': id_paciente,
+                    'medico': medico,
+                    'fecha_nacimiento': fecha_nacimiento.strftime("%d/%m/%Y"),
+                    'telefono': telefono,
+                    'email': email,
+                    'direccion': direccion,
+                    'observaciones': observaciones
+                }
+                st.success(f"✅ Datos de {paciente_seleccionado} guardados correctamente!")
+        
+        # Mostrar resumen de pacientes con datos guardados
+        st.markdown("---")
+        st.markdown("### 📋 Resumen de Pacientes")
+        
+        pacientes_guardados = st.session_state.pacientes_data.keys()
+        if pacientes_guardados:
+            st.info(f"**Pacientes con datos guardados:** {len(pacientes_guardados)}/{len(pacientes_disponibles)}")
+            
+            # Crear una tabla resumen
+            resumen_data = []
+            for paciente in pacientes_disponibles:
+                tiene_datos = paciente in st.session_state.pacientes_data
+                datos = st.session_state.pacientes_data.get(paciente, {})
+                resumen_data.append({
+                    "Paciente": paciente,
+                    "Nombre": datos.get('nombre', 'No completado'),
+                    "Edad": datos.get('edad', 'No completado'),
+                    "Estado": "✅ Completado" if tiene_datos else "⏳ Pendiente"
+                })
+            
+            # Mostrar tabla resumen
+            df_resumen = pd.DataFrame(resumen_data)
+            st.dataframe(
+                df_resumen, 
+                use_container_width=True,
+                column_config={
+                    "Paciente": "Código Paciente",
+                    "Nombre": "Nombre",
+                    "Edad": "Edad", 
+                    "Estado": "Estado"
+                }
+            )
+            
+            # Botón para limpiar todos los datos
+            if st.button("🗑️ Limpiar todos los datos"):
+                st.session_state.pacientes_data = {}
+                st.rerun()
+        else:
+            st.warning("ℹ️ No hay datos de pacientes guardados todavía. Completa el formulario para guardar la información.")
+        
     # Sección 3: Generar Reporte
     elif page == "📄 Generar Reporte":
         st.markdown('<div class="sub-header">📄 GENERAR REPORTE PDF</div>', unsafe_allow_html=True)
