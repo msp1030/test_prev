@@ -77,90 +77,76 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-class PDFReport(FPDF):
-    def header(self):
-        # Logo o título del header
-        self.set_font('Arial', 'B', 16)
-        self.cell(0, 10, 'INFORME DE ANÁLISIS GENÉTICO', 0, 1, 'C')
-        self.set_font('Arial', 'I', 10)
-        self.cell(0, 10, f'Fecha: {datetime.now().strftime("%d/%m/%Y")}', 0, 1, 'C')
-        self.ln(10)
-    
-    def footer(self):
-        self.set_y(-15)
-        self.set_font('Arial', 'I', 8)
-        self.cell(0, 10, f'Página {self.page_no()}', 0, 0, 'C')
-    
-    def add_patient_section(self, paciente_data):
-        self.set_font('Arial', 'B', 14)
-        self.cell(0, 10, 'DATOS DEL PACIENTE', 0, 1)
-        self.ln(5)
-        
-        self.set_font('Arial', '', 12)
-        info_lines = [
-            f"Nombre: {paciente_data['nombre']}",
-            f"Edad: {paciente_data['edad']} años",
-            f"Sexo: {paciente_data['sexo']}",
-            f"ID Paciente: {paciente_data['id_paciente']}",
-            f"Médico: {paciente_data['medico']}",
-            f"Fecha de Nacimiento: {paciente_data['fecha_nacimiento']}"
-        ]
-        
-        for line in info_lines:
-            self.cell(0, 8, line, 0, 1)
-        
-        self.ln(10)
-    
-    def add_alleles_section(self, alelos_df):
-        self.set_font('Arial', 'B', 14)
-        self.cell(0, 10, 'RESULTADOS DE ALELOS', 0, 1)
-        self.ln(5)
-        
-        if alelos_df is not None and not alelos_df.empty:
-            # Preparar datos para la tabla
-            columns = alelos_df.columns.tolist()
-            data = [columns] + alelos_df.values.tolist()
-            
-            # Configurar tabla
-            col_widths = [40] * len(columns)  # Ajustar según necesidad
-            
-            self.set_font('Arial', 'B', 10)
-            for i, column in enumerate(columns):
-                self.cell(col_widths[i], 10, str(column), 1, 0, 'C')
-            self.ln()
-            
-            self.set_font('Arial', '', 9)
-            for row in alelos_df.values:
-                for item in row:
-                    self.cell(col_widths[0], 10, str(item), 1, 0, 'C')
-                self.ln()
-        else:
-            self.set_font('Arial', 'I', 12)
-            self.cell(0, 10, 'No hay datos de alelos disponibles', 0, 1)
-        
-        self.ln(10)
-    
-    def add_interpretation(self, interpretacion):
-        self.set_font('Arial', 'B', 14)
-        self.cell(0, 10, 'INTERPRETACIÓN', 0, 1)
-        self.ln(5)
-        
-        self.set_font('Arial', '', 11)
-        # Manejar texto largo con multi_cell
-        self.multi_cell(0, 8, interpretacion)
-        self.ln(10)
-
-def create_pdf(paciente_data, alelos_df, interpretacion):
-    pdf = PDFReport()
+def create_pdf(paciente_data, datos_geneticos, paciente_codigo):
+    pdf = FPDF()
     pdf.add_page()
     
-    # Agregar secciones
-    pdf.add_patient_section(paciente_data)
-    pdf.add_alleles_section(alelos_df)
-    pdf.add_interpretation(interpretacion)
+    # Header
+    pdf.set_font('Arial', 'B', 16)
+    pdf.cell(0, 10, 'INFORME DE FARMACOGENÉTICA', 0, 1, 'C')
+    pdf.set_font('Arial', 'I', 10)
+    pdf.cell(0, 10, f'Fecha: {datetime.now().strftime("%d/%m/%Y")}', 0, 1, 'C')
+    pdf.ln(10)
+    
+    # Datos del paciente
+    pdf.set_font('Arial', 'B', 14)
+    pdf.cell(0, 10, 'DATOS DEL PACIENTE', 0, 1)
+    pdf.ln(5)
+    
+    pdf.set_font('Arial', '', 12)
+    info_lines = [
+        f"Nombre: {paciente_data.get('nombre', 'No especificado')}",
+        f"Edad: {paciente_data.get('edad', 'No especificado')}",
+        f"Sexo: {paciente_data.get('sexo', 'No especificado')}",
+        f"ID Paciente: {paciente_data.get('id_paciente', paciente_codigo)}",
+        f"Médico: {paciente_data.get('medico', 'No especificado')}",
+        f"Fecha de Nacimiento: {paciente_data.get('fecha_nacimiento', 'No especificada')}"
+    ]
+    
+    for line in info_lines:
+        pdf.cell(0, 8, line, 0, 1)
+    
+    pdf.ln(10)
+    
+    # Resultados genéticos
+    pdf.set_font('Arial', 'B', 14)
+    pdf.cell(0, 10, 'RESULTADOS GENÉTICOS', 0, 1)
+    pdf.ln(5)
+    
+    if datos_geneticos:
+        for gen, info in datos_geneticos.items():
+            pdf.set_font('Arial', 'B', 12)
+            pdf.cell(0, 8, f"Gen: {gen}", 0, 1)
+            
+            pdf.set_font('Arial', '', 10)
+            pdf.cell(0, 6, f"Genotipo: {info[0]}", 0, 1)
+            pdf.cell(0, 6, f"Score: {info[1]}", 0, 1)
+            pdf.cell(0, 6, f"Fenotipo: {info[2]}", 0, 1)
+            
+            # Recomendación clínica (puede ser larga, usar multi_cell)
+            pdf.set_font('Arial', 'B', 10)
+            pdf.cell(0, 6, "Recomendación clínica:", 0, 1)
+            pdf.set_font('Arial', '', 9)
+            
+            # Dividir texto largo en líneas
+            recomendacion = info[3]
+            # Ajustar el ancho de línea para que quepa en la página
+            pdf.multi_cell(0, 5, recomendacion)
+            
+            pdf.ln(5)
+    else:
+        pdf.set_font('Arial', 'I', 12)
+        pdf.cell(0, 10, 'No hay datos genéticos disponibles', 0, 1)
+    
+    # Información adicional si existe
+    if paciente_data.get('observaciones'):
+        pdf.ln(5)
+        pdf.set_font('Arial', 'B', 12)
+        pdf.cell(0, 8, "Observaciones clínicas:", 0, 1)
+        pdf.set_font('Arial', '', 10)
+        pdf.multi_cell(0, 6, paciente_data.get('observaciones', ''))
     
     return pdf
-
 
 def lectura_csv(path):
     # Lectura del archivo csv con los datos de cada paciente.
@@ -443,11 +429,26 @@ def main():
     elif page == "📝 Datos del Paciente":
         st.markdown('<div class="sub-header">📝 INFORMACIÓN DE LOS PACIENTES</div>', unsafe_allow_html=True)
         
+        # Inicializar el almacenamiento de pacientes en session_state si no existe
+        if 'pacientes_data' not in st.session_state:
+            st.session_state.pacientes_data = {}
+        
         # Selector de paciente
         pacientes_disponibles = list(st.session_state.resultado.keys())
         paciente_seleccionado = st.selectbox("Selecciona el paciente *", pacientes_disponibles)
         
         st.markdown(f"### Editando datos para: **{paciente_seleccionado}**")
+        
+        # Mostrar información genética del paciente seleccionado
+        with st.expander("🧬 Ver información genética del paciente"):
+            if paciente_seleccionado in resultado_final:
+                datos_geneticos = resultado_final[paciente_seleccionado]
+                for gen, info in datos_geneticos.items():
+                    st.markdown(f"**{gen}:**")
+                    st.markdown(f"- Genotipo: {info[0]}")
+                    st.markdown(f"- Score: {info[1]}")
+                    st.markdown(f"- Fenotipo: {info[2]}")
+                    st.markdown(f"- Recomendación: {info[3]}")
         
         with st.form(f"patient_form_{paciente_seleccionado}"):
             # Cargar datos existentes si los hay, sino valores por defecto/vacíos
@@ -465,7 +466,8 @@ def main():
                     "Edad", 
                     min_value=0, 
                     max_value=120, 
-                    value=datos_existentes.get('edad', 30)
+                    value=datos_existentes.get('edad', 0),
+                    placeholder="Ej: 45"
                 )
                 sexo = st.selectbox(
                     "Sexo", 
@@ -478,7 +480,7 @@ def main():
                 id_paciente = st.text_input(
                     "ID del Paciente", 
                     value=datos_existentes.get('id_paciente', paciente_seleccionado),
-                    placeholder="Ej: DPD900"
+                    placeholder="Ej: PAC-001"
                 )
                 medico = st.text_input(
                     "Médico solicitante", 
@@ -489,7 +491,7 @@ def main():
                     "Fecha de Nacimiento", 
                     value=datetime.strptime(datos_existentes.get('fecha_nacimiento', '1990-01-01'), "%d/%m/%Y") 
                     if datos_existentes.get('fecha_nacimiento') 
-                    else datetime(1990, 1, 1)
+                    else None
                 )
             
             # Información adicional
@@ -522,13 +524,15 @@ def main():
             
             if submitted:
                 # Guardar todos los datos (incluyendo campos vacíos)
+                fecha_nacimiento_str = fecha_nacimiento.strftime("%d/%m/%Y") if fecha_nacimiento else ""
+                
                 st.session_state.pacientes_data[paciente_seleccionado] = {
                     'nombre': nombre,
                     'edad': edad,
                     'sexo': sexo,
                     'id_paciente': id_paciente,
                     'medico': medico,
-                    'fecha_nacimiento': fecha_nacimiento.strftime("%d/%m/%Y"),
+                    'fecha_nacimiento': fecha_nacimiento_str,
                     'telefono': telefono,
                     'email': email,
                     'direccion': direccion,
@@ -568,11 +572,6 @@ def main():
                     "Estado": "Estado"
                 }
             )
-            
-            # Botón para limpiar todos los datos
-            if st.button("🗑️ Limpiar todos los datos"):
-                st.session_state.pacientes_data = {}
-                st.rerun()
         else:
             st.warning("ℹ️ No hay datos de pacientes guardados todavía. Completa el formulario para guardar la información.")
         
@@ -580,12 +579,7 @@ def main():
     elif page == "📄 Generar Reporte":
         st.markdown('<div class="sub-header">📄 GENERAR REPORTES PDF</div>', unsafe_allow_html=True)
         
-        # Verificar que tenemos datos de alelos
-        if st.session_state.resultado is None:
-            st.warning("⚠️ Primero carga un archivo CSV en la sección '📤 Cargar Alelos'")
-            return
-        
-        pacientes_disponibles = list(st.session_state.resultado.keys())
+        pacientes_disponibles = list(resultado_final.keys())
         
         # Selector múltiple para generar varios PDFs a la vez
         st.markdown("### Selecciona los pacientes para generar reportes:")
@@ -600,15 +594,9 @@ def main():
             st.info("💡 Selecciona al menos un paciente para generar reportes PDF")
             return
         
-        # Interpretación personalizada (compartida para todos los pacientes o individual)
-        st.markdown("### 🧪 Interpretación de Resultados")
-        interpretacion_compartida = st.text_area(
-            "Interpretación clínica (compartida para todos los pacientes):",
-            value="Los resultados del análisis genético muestran el perfil de alelos del paciente. "
-                "Se recomienda revisar los hallazgos en el contexto clínico particular del paciente "
-                "y considerar la correlación con la presentación sintomática.",
-            height=150
-        )
+        # Opción para generar todos los pacientes
+        if st.checkbox("Seleccionar todos los pacientes"):
+            pacientes_seleccionados = pacientes_disponibles
         
         # Generar PDFs
         if st.button("🖨️ Generar Reportes PDF Seleccionados"):
@@ -617,41 +605,42 @@ def main():
                     try:
                         # Obtener datos del paciente (si existen)
                         paciente_data = st.session_state.pacientes_data.get(paciente, {
-                            'nombre': f"Paciente {paciente}",
-                            'edad': 0,
+                            'nombre': '',
+                            'edad': '',
                             'sexo': '',
                             'id_paciente': paciente,
                             'medico': '',
-                            'fecha_nacimiento': datetime.now().strftime("%d/%m/%Y"),
+                            'fecha_nacimiento': '',
                             'telefono': '',
                             'email': '',
                             'direccion': '',
                             'observaciones': ''
                         })
                         
-                        # Obtener alelos específicos para este paciente del resultado_final
-                        # (aquí asumo que resultado_final[paciente] contiene los datos de alelos)
-                        alelos_paciente = st.session_state.resultado.get(paciente, pd.DataFrame())
+                        # Obtener datos genéticos del resultado_final
+                        datos_geneticos = resultado_final.get(paciente, {})
                         
-                        pdf = create_pdf(
-                            paciente_data,
-                            alelos_paciente,  # O st.session_state.alelos_df si es el mismo para todos
-                            interpretacion_compartida
-                        )
+                        pdf = create_pdf(paciente_data, datos_geneticos, paciente)
                         
                         # Guardar PDF en bytes
                         pdf_bytes = pdf.output(dest='S').encode('latin1')
                         
-                        # Botón de descarga individual
-                        nombre_archivo = f"reporte_{paciente}_{datetime.now().strftime('%Y%m%d')}.pdf"
+                        # Nombre del archivo
+                        nombre_paciente = paciente_data.get('nombre', paciente).replace(' ', '_')
+                        nombre_archivo = f"reporte_{nombre_paciente}_{datetime.now().strftime('%Y%m%d')}.pdf"
                         
-                        st.download_button(
-                            label=f"📥 Descargar {paciente}",
-                            data=pdf_bytes,
-                            file_name=nombre_archivo,
-                            mime="application/pdf",
-                            key=f"download_{paciente}"
-                        )
+                        # Botón de descarga individual
+                        col1, col2 = st.columns([3, 1])
+                        with col1:
+                            st.download_button(
+                                label=f"📥 Descargar {paciente} - {paciente_data.get('nombre', 'Sin nombre')}",
+                                data=pdf_bytes,
+                                file_name=nombre_archivo,
+                                mime="application/pdf",
+                                key=f"download_{paciente}"
+                            )
+                        with col2:
+                            st.info(f"Genes: {len(datos_geneticos)}")
                         
                     except Exception as e:
                         st.error(f"❌ Error al generar PDF para {paciente}: {str(e)}")
