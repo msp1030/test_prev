@@ -581,11 +581,11 @@ def main():
         st.markdown('<div class="sub-header">📄 GENERAR REPORTES PDF</div>', unsafe_allow_html=True)
         
         # Verificar que tenemos datos de alelos
-        if st.session_state.alelos_df is None:
+        if st.session_state.resultado is None:
             st.warning("⚠️ Primero carga un archivo CSV en la sección '📤 Cargar Alelos'")
             return
         
-        pacientes_disponibles = list(resultado_final.keys())
+        pacientes_disponibles = list(st.session_state.resultado.keys())
         
         # Selector múltiple para generar varios PDFs a la vez
         st.markdown("### Selecciona los pacientes para generar reportes:")
