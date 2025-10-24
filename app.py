@@ -8,7 +8,6 @@ import os
 import base64
 import openpyxl
 
-'''
 
 # Configuración de la página
 st.set_page_config(
@@ -162,11 +161,10 @@ def create_pdf(paciente_data, alelos_df, interpretacion):
     
     return pdf
 
-'''
 
 def lectura_csv(path):
     # Lectura del archivo csv con los datos de cada paciente.
-    df = pd.read_csv("Genotype Matrix.csv", sep=';')
+    df = pd.read_csv(path, sep=';')
     # Los datos se pasan a un diccionario
     datos_dict = {df["Sample/Assay"][i]: {df.columns[j]: df[df.columns[j]][i] for j in range(1, len(df.columns))} for i in range(len(df))}
     # Tabla con las variantes y sus mutaciones asociadas
@@ -307,15 +305,6 @@ def formatear_genotipos(resultados):
             formateados[paciente][gen] = f"{alelos[0]}/{alelos[1]}"
     return formateados
 
-
-# Procesar
-dict_pacientes = lectura_csv("Genotype Matrix.csv")
-resultados = determinar_genotipo_definitivo(dict_pacientes)
-resultados_formateados = formatear_genotipos(resultados)
-
-#print(resultados_formateados)
-
-
 df = pd.read_excel("CYP2D6_Diplotype_Phenotype_Table.xlsx")
 diccionario_CYP2D6 = dict(zip(df.iloc[:, 0], zip(df.iloc[:, 1], df.iloc[:, 2])))
 def fenotipo(genotipo):
@@ -331,15 +320,12 @@ def fenotipo(genotipo):
                 elif alelos[0] != "*1" and alelos[1] != "*1":
                     Sol[nombre][gen] = [f"{alelos[0]}/{alelos[1]}", 0.0, 'Poor Metabolizer']
                 else:
-                    Sol[nombre][gen] = [f"{alelos[0]}/{alelos[1]}", 1.0, 'Intermediate Metabolizer']
+                    Sol[nombre][gen] = [f"{alelos[0]}/{alelos[1]}", 1.0,'Intermediate Metabolizer']
             else:
                 Sol[nombre][gen] = [diccionario[nombre][gen]]
                 Sol[nombre][gen].append(diccionario_CYP2D6[diccionario[nombre][gen]][0])
                 Sol[nombre][gen].append(diccionario_CYP2D6[diccionario[nombre][gen]][1])
     return Sol
-
-fenotipo_test = fenotipo(resultados_formateados)
-print(fenotipo_test)
 
 
 def recomendacionClinica(fenotipo):
@@ -354,26 +340,34 @@ def recomendacionClinica(fenotipo):
                 url='https://api.cpicpgx.org/v1/recommendation?select=drug(name),guideline(name),*&drugid=eq.'+ID_Farmaco+'&lookupkey=cs.{\"'+lookupkey[0]+'":"'+lookupkey[1]+'"}' 
             elif gen == "DPYD":
                 lookupkey= [gen, str(fenotipo[paciente][gen][1])] # Obtiene la clave de búsqueda del fenotipo.
-                ID_Farmaco = "RxNorm:4492"
-                url='https://api.cpicpgx.org/v1/recommendation?select=drug(name),guideline(name),*&drugid=eq.'+ID_Farmaco+'&lookupkey=cs.{\"'+lookupkey[0]+'":"'+lookupkey[1]+'"}' 
-            elif gen == "UGT1A1":
-                lookupkey= [gen, str(fenotipo[paciente][gen][2])] # Obtiene la clave de búsqueda del fenotipo.
                 ID_Farmaco = "RxNorm:51499"
                 url='https://api.cpicpgx.org/v1/recommendation?select=drug(name),guideline(name),*&drugid=eq.'+ID_Farmaco+'&lookupkey=cs.{\"'+lookupkey[0]+'":"'+lookupkey[1]+'"}' 
+                if float(lookupkey[1])==2.0:
+                    resultado[paciente][gen].append("Based on genotype, there is no indication to change dose or therapy. Use label-recommended dosage and administration.")
+                elif float(lookupkey[1])>=1.0:
+                    resultado[paciente][gen].append("Reduce starting dose by 50% followed by titration of dose based on toxicity or therapeutic drug monitoring (if available). Patients with the c.[2846A>T];[2846A>T] genotype may require >50% reduction in starting dose.")
+                elif float(lookupkey[1])==0.5:
+                    resultado[paciente][gen].append("Avoid use of 5- fluorouracil or 5-fluorouracil prodrug-based regimens. In the event, based on clinical advice, alternative agents are not considered a suitable therapeutic option, 5-fluorouracil should be administered at a strongly reduced dose with early therapeutic drug monitoring.")
+                elif float(lookupkey[1])== 0.0:
+                    resultado[paciente][gen].append("Avoid use of 5-fluorouracil or 5-fluorouracil prodrug-based regimens.")
+            elif gen == "UGT1A1":
+                lookupkey= [gen, str(fenotipo[paciente][gen][1])] # Obtiene la clave de búsqueda del fenotipo.
+                ID_Farmaco = "RxNorm:51499"
+                url='https://api.cpicpgx.org/v1/recommendation?select=drug(name),guideline(name),*&drugid=eq.'+ID_Farmaco+'&lookupkey=cs.{\"'+lookupkey[0]+'":"'+lookupkey[1]+'"}' 
+                if fenotipo[paciente][gen][0] == "*1/*1":
+                    resultado[paciente][gen].append("The guideline does not provide a recommendation for irinotecan in normal metabolizers.")
+                elif fenotipo[paciente][gen][0] == "*1/*28":
+                    resultado[paciente][gen].append("NO action is needed for this gene-drug interaction.")
+                elif fenotipo[paciente][gen][0] == "*28/*28":
+                    resultado[paciente][gen].append("Start with 70% of the normal dose If the patient tolerates this initial dose, the dose can be increased, guided by the neutrophil count.")
             response = requests.get(url) # Realiza una solicitud GET a la API.
             json_obtenido = response.json() # Convierte la respuesta JSON en un objeto Python.
             datos=json_obtenido # Asigna los datos JSON a la variable 'datos'.
             if len(datos) != 0: # Verifica si se encontraron recomendaciones.
-                #print(datos)
                 resultado[paciente][gen].append(datos[0]['drugrecommendation'].encode('latin-1','ignore').decode('latin-1')) # Agrega la recomendación del fármaco a la lista, decodificando caracteres especiales.
     return resultado # Devuelve la lista con los resultados.
 
-resultado_final = recomendacionClinica(fenotipo_test)
 
-print(resultado_final)
-
-
-'''
 def main():
     # Header principal
     st.markdown('<div class="main-header">🧬 SISTEMA DE ANÁLISIS DE ALELOS</div>', unsafe_allow_html=True)
@@ -382,7 +376,7 @@ def main():
     with st.sidebar:
         st.markdown("### 📊 Navegación")
         page = st.radio("Selecciona una sección:", 
-                       ["📝 Datos del Paciente", "📤 Cargar Alelos", "📄 Generar Reporte"])
+                       ["📤 Cargar Alelos","📝 Datos del Paciente", "📄 Generar Reporte"])
         
         st.markdown("---")
         st.markdown("### 💡 Información")
@@ -399,9 +393,53 @@ def main():
     if 'alelos_df' not in st.session_state:
         st.session_state.alelos_df = None
     
-    # Sección 1: Datos del Paciente
-    if page == "📝 Datos del Paciente":
-        st.markdown('<div class="sub-header">📝 INFORMACIÓN DEL PACIENTE</div>', unsafe_allow_html=True)
+    
+    # Sección 1: Cargar Alelos
+    if page == "📤 Cargar Alelos":
+        st.markdown('<div class="sub-header">📤 CARGA DE ARCHIVOS CSV</div>', unsafe_allow_html=True)
+        
+        st.markdown('<div class="upload-box">', unsafe_allow_html=True)
+        uploaded_file = st.file_uploader("Sube tu archivo CSV con los alelos de cada paciente", type=['csv'])
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        if uploaded_file is not None:
+            try:
+                # Leer el archivo CSV
+                dict_pacientes = lectura_csv(uploaded_file)
+                st.session_state.alelos_df = dict_pacientes
+                
+                st.success(f"✅ Archivo cargado correctamente! ({len(dict_pacientes)} pacientes)")
+                
+                st.markdown("### Procesando datos...")
+
+                resultados = determinar_genotipo_definitivo(dict_pacientes)
+                resultados_formateados = formatear_genotipos(resultados)
+                fenotipo_resultado = fenotipo(resultados_formateados)
+                resultado_final = recomendacionClinica(fenotipo_resultado)
+
+                st.success(f"Datos procesados! Por favor, pasa a la siguiente sección.")
+                    
+            except Exception as e:
+                st.error(f"❌ Error al cargar el archivo: {str(e)}")
+        
+        # Ejemplo de formato esperado
+        with st.expander("📝 ¿Qué formato debe tener el CSV?"):
+            st.markdown("""
+            **Ejemplo de estructura esperada:**
+            ```
+            Paciente;gen1alelo1;gen1alelo2;gen2alelo1;gen2alelo2
+            DPD900;  T/T;       C/G;       T/C;       C/A
+            DPD901;  T/T;       G/G;       C/C;       C/C
+            DPD902;  T/C;       C/G;       C/T;       A/C
+            ```
+            Los genes que esta herramienta son capaces de procesar son 'CYP2D6', 'DPYD' y 'UGT1A1'.
+            """)
+
+
+    # Seccion 2: Datos de los pacientes
+
+    elif page == "📝 Datos del Paciente":
+        st.markdown('<div class="sub-header">📝 INFORMACIÓN DE LOS PACIENTES</div>', unsafe_allow_html=True)
         
         with st.form("patient_form"):
             col1, col2 = st.columns(2)
@@ -445,51 +483,6 @@ def main():
                     st.success("✅ Datos del paciente guardados correctamente!")
                 else:
                     st.error("❌ Por favor, completa todos los campos obligatorios (*)")
-    
-    # Sección 2: Cargar Alelos
-    elif page == "📤 Cargar Alelos":
-        st.markdown('<div class="sub-header">📤 CARGA DE ARCHIVOS CSV</div>', unsafe_allow_html=True)
-        
-        st.markdown('<div class="upload-box">', unsafe_allow_html=True)
-        uploaded_file = st.file_uploader("Sube tu archivo CSV con los alelos", type=['csv'])
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        if uploaded_file is not None:
-            try:
-                # Leer el archivo CSV
-                df = pd.read_csv(uploaded_file)
-                st.session_state.alelos_df = df
-                
-                st.success(f"✅ Archivo cargado correctamente! ({len(df)} registros)")
-                
-                # Mostrar preview
-                st.markdown("### 📋 Vista previa de los datos:")
-                st.dataframe(df.head(10), use_container_width=True)
-                
-                # Estadísticas básicas
-                st.markdown("### 📊 Estadísticas del archivo:")
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Registros", len(df))
-                with col2:
-                    st.metric("Columnas", len(df.columns))
-                with col3:
-                    st.metric("Tamaño", f"{uploaded_file.size / 1024:.1f} KB")
-                    
-            except Exception as e:
-                st.error(f"❌ Error al cargar el archivo: {str(e)}")
-        
-        # Ejemplo de formato esperado
-        with st.expander("📝 ¿Qué formato debe tener el CSV?"):
-            st.markdown("""
-            **Ejemplo de estructura esperada:**
-            ```
-            gen,alelo1,alelo2,frecuencia,interpretacion
-            HLA-A,01:01,02:01,0.15,Alta frecuencia
-            HLA-B,08:01,44:02,0.08,Media frecuencia
-            HLA-DRB1,03:01,04:01,0.12,Baja frecuencia
-            ```
-            """)
     
     # Sección 3: Generar Reporte
     elif page == "📄 Generar Reporte":
@@ -562,5 +555,5 @@ def main():
 if __name__ == "__main__":
     main()
 
-'''
+
 
