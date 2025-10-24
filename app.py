@@ -618,7 +618,7 @@ def main():
                         })
                         
                         # Obtener datos genéticos del resultado_final
-                        datos_geneticos = resultado_final.get(paciente, {})
+                        datos_geneticos = st.session_state.resultado.get(paciente, {})
                         
                         pdf = create_pdf(paciente_data, datos_geneticos, paciente)
                         
