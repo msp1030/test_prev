@@ -441,8 +441,8 @@ def main():
         
         # Mostrar información genética del paciente seleccionado
         with st.expander("🧬 Ver información genética del paciente"):
-            if paciente_seleccionado in resultado_final:
-                datos_geneticos = resultado_final[paciente_seleccionado]
+            if paciente_seleccionado in st.session_state.resultado:
+                datos_geneticos = st.session_state.resultado[paciente_seleccionado]
                 for gen, info in datos_geneticos.items():
                     st.markdown(f"**{gen}:**")
                     st.markdown(f"- Genotipo: {info[0]}")
@@ -579,7 +579,7 @@ def main():
     elif page == "📄 Generar Reporte":
         st.markdown('<div class="sub-header">📄 GENERAR REPORTES PDF</div>', unsafe_allow_html=True)
         
-        pacientes_disponibles = list(resultado_final.keys())
+        pacientes_disponibles = list(st.session_state.resultado.keys())
         
         # Selector múltiple para generar varios PDFs a la vez
         st.markdown("### Selecciona los pacientes para generar reportes:")
