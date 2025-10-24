@@ -631,7 +631,7 @@ def main():
                         
                         # Obtener alelos específicos para este paciente del resultado_final
                         # (aquí asumo que resultado_final[paciente] contiene los datos de alelos)
-                        alelos_paciente = resultado_final.get(paciente, pd.DataFrame())
+                        alelos_paciente = st.session_state.resultado.get(paciente, pd.DataFrame())
                         
                         pdf = create_pdf(
                             paciente_data,
