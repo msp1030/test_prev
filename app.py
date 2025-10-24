@@ -417,6 +417,8 @@ def main():
                 fenotipo_resultado = fenotipo(resultados_formateados)
                 resultado_final = recomendacionClinica(fenotipo_resultado)
 
+                st.session_state.resultado = resultado_final
+
                 st.success(f"Datos procesados! Por favor, pasa a la siguiente sección.")
                     
             except Exception as e:
@@ -442,7 +444,7 @@ def main():
         st.markdown('<div class="sub-header">📝 INFORMACIÓN DE LOS PACIENTES</div>', unsafe_allow_html=True)
         
         # Selector de paciente
-        pacientes_disponibles = list(resultado_final.keys())
+        pacientes_disponibles = list(st.session_state.resultado.keys())
         paciente_seleccionado = st.selectbox("Selecciona el paciente *", pacientes_disponibles)
         
         st.markdown(f"### Editando datos para: **{paciente_seleccionado}**")
@@ -476,7 +478,7 @@ def main():
                 id_paciente = st.text_input(
                     "ID del Paciente", 
                     value=datos_existentes.get('id_paciente', paciente_seleccionado),
-                    placeholder="Ej: DPD941"
+                    placeholder="Ej: DPD900"
                 )
                 medico = st.text_input(
                     "Médico solicitante", 
