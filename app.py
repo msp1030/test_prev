@@ -489,7 +489,7 @@ def main():
                 )
                 fecha_nacimiento = st.date_input(
                     "Fecha de Nacimiento", 
-                    value=datetime.strptime(datos_existentes.get('fecha_nacimiento', '1990-01-01'), "%d/%m/%Y") 
+                    value=datetime.strptime(datos_existentes.get('fecha_nacimiento', '01-01-1990'), "%d/%m/%Y") 
                     if datos_existentes.get('fecha_nacimiento') 
                     else None
                 )
